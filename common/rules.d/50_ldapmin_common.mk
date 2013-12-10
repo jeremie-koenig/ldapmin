@@ -5,4 +5,6 @@ stamp/etc: \
 	etc/pkgsync/musthave \
 	etc/pkgsync/mayhave \
 	etc/pkgsync/maynothave \
+	etc/hostname \
+	etc/hosts \
 
