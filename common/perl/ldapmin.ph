@@ -74,6 +74,18 @@ sub who_am_i () {
 	return map($$_{dn}->[0], ldap_search(filter => "(|$macfilters)"));
 }
 
+sub ldap_dn2domain ($) {
+	my $dn = shift;
+	my $domain = "";
+
+	while ($dn =~ /^(.+?)=(.*?)(?:,(.*)|$)/) {
+		$domain = "${domain}$2." if ($1 eq 'cn' || $1 eq 'dc');
+		$dn = $3;
+	}
+
+	return length($dn) ? undef : $domain;
+}
+
 sub ldap_dn2host ($) {
 	my $dn = shift;
 	my $e;
