@@ -78,7 +78,7 @@ sub ldap_dn2domain ($) {
 	my $dn = shift;
 	my $domain = "";
 
-	while ($dn =~ /^(.+?)=(.*?)(?:,(.*)|$)/) {
+	while ($dn =~ /^(.+?)=([^,]*),?(.*)/) {
 		$domain = "${domain}$2." if ($1 eq 'cn' || $1 eq 'dc');
 		$dn = $3;
 	}
