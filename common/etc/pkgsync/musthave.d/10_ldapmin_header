@@ -1,0 +1,41 @@
+## Minimal installation
+
+# System administration mechanisms
+pkgsync
+apt-listchanges
+popularity-contest
+rsyslog
+bridge-utils
+
+# Basic shell environment
+ncurses-term
+bsd-mailx
+info
+man-db
+manpages
+task-english
+time
+
+# Administration and networking tools
+sudo
+pciutils
+usbutils
+dnsutils
+lsof
+socat
+traceroute
+telnet
+iputils-ping
+iptables
+ldap-utils
+ldapvi
+
+# Shell user tools
+vim
+screen
+mutt
+git
+wget
+
+## Per-component lists follow
+
