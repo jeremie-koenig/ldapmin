@@ -1,0 +1,31 @@
+dn: cn=ldapmin,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: ldapmin
+#
+olcObjectIdentifier: LDAPmin 1.3.6.1.4.1.858827
+olcObjectIdentifier: LDAPminAttributeType LDAPmin:3
+olcObjectIdentifier: LDAPminObjectClass LDAPmin:4
+#
+olcAttributeTypes: ( LDAPminAttributeType:1
+  NAME 'ldapminServiceDN'
+  SUP distinguishedName )
+olcAttributeTypes: ( LDAPminAttributeType:2
+  NAME 'ldapminServicePriority'
+  EQUALITY integerMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+olcAttributeTypes: ( LDAPminAttributeType:3
+  NAME 'ldapminServiceWeight'
+  EQUALITY integerMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 )
+olcObjectClasses: ( LDAPminObjectClass:1
+  NAME 'ldapminServiceRequest'
+  DESC 'Description of an ldapmin service'
+  SUP top
+  STRUCTURAL
+  MUST ( cn $ ipServiceProtocol $ ipServicePort ) )
+olcObjectClasses: ( LDAPminObjectClass:2
+  NAME 'ldapminServiceOffer'
+  DESC 'Offer to implement ldapmin services'
+  AUXILIARY
+  MUST ( ldapminServiceDN )
+  MAY ( ldapminServicePriority $ ldapminServiceWeight ) )
