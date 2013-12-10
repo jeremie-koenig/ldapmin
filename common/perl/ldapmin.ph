@@ -107,5 +107,35 @@ sub ldap_dn2host ($) {
 	return $host;
 }
 
+sub shiftdn ($) {
+	my $dn = shift;
+	$dn =~ s/^[^,]*(,|$)//;
+	return length($dn) ? $dn : undef;
+}
+
+# Given an ldapminServiceDN, returns a list of corresponding service offers
+sub ldapmin_service_offers ($) {
+	my $dn = shift;
+	my @offer;
+
+	while (defined($dn)) {
+		my $f = "(&(objectClass=ldapminServiceOffer)"
+		        . "(ldapminServiceDN=$dn))";
+		push @offer, ldap_search(filter => $f);
+		$dn = shiftdn($dn);
+	}
+
+	return @offer;
+}
+
+# Given a service name, return the entries for the ones we should provide
+sub ldapmin_service_requests ($) {
+	my $name = shift;
+
+	# FIXME: use our serviceOffer's as base for searches
+	return ldap_search(filter => "(&(objectClass=ldapminServiceRequest)"
+	                             . "(cn=$name))");
+}
+
 
 1;
