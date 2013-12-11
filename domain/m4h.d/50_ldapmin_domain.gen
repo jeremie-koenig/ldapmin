@@ -105,9 +105,9 @@ sub emitrq($) {
 		port => $$srq{ipServicePort}[0],
 	);
 
-	print ZONE "# $$srq{dn}[0]\n\n";
+	print ZONE ";; $$srq{dn}[0]\n\n";
 	foreach my $offer (ldapmin_service_offers($$srq{dn}[0])) {
-		print ZONE "## $$offer{dn}[0]\n";
+		print ZONE "; $$offer{dn}[0]\n";
 		emitrr(%rr,
 			offer => $offer,
 			target => ldap_dn2domain($$offer{dn}[0]),
