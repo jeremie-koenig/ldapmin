@@ -1,0 +1,144 @@
+#!/usr/bin/perl -w
+use File::Path qw(make_path);
+use strict;
+require "ldapmin.ph";
+
+my $zonedir = "ldapmin/domain/zones";
+
+my $default_prio = 10;
+my $default_weight = 100;
+
+# Default port numbers for common protocols
+my %default_port = (
+	domain => 53,
+	smtp => 25,
+	ldap => 389,
+	http => 80,
+	# ...
+	);
+
+# Conventional host name aliases for some services
+my %conventional_name = (
+	domain => "ns",
+	smtp => "mail",
+	ldap => "ldap",
+	http => "www",
+);
+
+
+# The following procedures are used to emit different kinds of RRs
+
+# Common helper function to emit A and AAAA records
+sub emit_address($$) {
+	my ($name, $addr) = @_;
+	my $type = ($addr =~ /^[0-9.]*$/) ? "A" : "AAAA";
+	printf ZONE "%-40s IN %-4s %s\n", $name, $type, $addr;
+}
+
+# SRV records are always applicable
+sub emit_srv (%) {
+	my %rr = @_;
+	printf ZONE "%-40s IN SRV  %5d %5d %5d %s\n",
+		"_$rr{service}._$rr{proto}.$rr{name}",
+		$rr{priority},
+		$rr{weight},
+		$rr{port},
+		$rr{target};
+}
+
+# Emit MX records
+sub emit_mx (%) {
+	my %rr = @_;
+	return unless $rr{service} eq "smtp" && $rr{port} == 25;
+	printf ZONE "%-40s IN MX   %5d %5s %5s %s\n",
+		$rr{name},
+		$rr{priority},
+		"",
+		"",
+		$rr{target};
+}
+
+# Emit NS records
+sub emit_ns (%) {
+	my %rr = @_;
+	return unless $rr{service} eq "domain";
+	return unless $rr{proto} eq "udp";
+	return unless $rr{port} == 53;
+	printf ZONE "%-40s IN NS   %5s %5s %5s %s\n",
+		$rr{name},
+		"",
+		"",
+		"",
+		$rr{target};
+}
+
+# Emit A records for the service names
+sub emit_service_a (%) {
+	my %rr = @_;
+	return unless $rr{port} == $default_port{$rr{service}};
+	return unless exists($rr{offer}{ipHostNumber});
+
+	my $srvname = $conventional_name{$rr{service}};
+	return unless defined($srvname);
+
+	foreach (@{$rr{offer}{ipHostNumber}}) {
+		emit_address("$srvname.$rr{name}", $_);
+	}
+}
+
+sub emitrr (%) {
+	my %rr = @_;
+	emit_ns(%rr);
+	emit_mx(%rr);
+	emit_service_a(%rr);
+	emit_srv(%rr);
+}
+
+# Emit the DNS resource records which correspond to a given service
+sub emitrq($) {
+	my $srq = shift;
+	my %rr = (
+		request => $srq,
+		name => ldap_dn2domain(shiftdn($$srq{dn}[0])),
+		service => $$srq{cn}[0],
+		proto => $$srq{ipServiceProtocol}[0],
+		port => $$srq{ipServicePort}[0],
+	);
+
+	print ZONE "# $$srq{dn}[0]\n\n";
+	foreach my $offer (ldapmin_service_offers($$srq{dn}[0])) {
+		print ZONE "## $$offer{dn}[0]\n";
+		emitrr(%rr,
+			offer => $offer,
+			target => ldap_dn2domain($$offer{dn}[0]),
+			priority => $$offer{priority}[0] || $default_prio,
+			weight => $$offer{weight}[0] || $default_weight,
+		);
+		print ZONE "\n";
+	}
+}
+
+print "m4_define(`ldapmin_domain_zones',\n\t`";
+make_path $zonedir;
+foreach my $rq (ldapmin_service_requests("domain")) {
+	my $srqf = "(objectClass=ldapminServiceRequest)";
+
+	# Find the DN of the root object for this zone
+	my $dn = $$rq{dn}[0];
+	do { $dn = shiftdn($dn) } while ($dn =~ /^(?!dc=)./);
+	next unless defined($dn);
+
+	# Now build the zone by iterating over service requests
+	my $zone = ldap_dn2domain($dn);
+	open ZONE, "> $zonedir/$zone.n";
+	my @rr;
+	foreach my $srq (ldap_search(base => $dn, filter => $srqf)) {
+		emitrq($srq);
+	}
+	close ZONE;
+	rename "$zonedir/$zone.n", "$zonedir/$zone";
+
+	print "`$zone',\n\t";
+}
+print "')\n";
+

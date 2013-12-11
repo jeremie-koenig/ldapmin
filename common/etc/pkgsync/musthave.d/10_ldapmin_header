@@ -1,7 +1,10 @@
 ## Minimal installation
 
-# System administration mechanisms
+# Dependencies of ldapmin
 pkgsync
+libnet-ldap-perl
+
+# System administration mechanisms
 apt-listchanges
 popularity-contest
 rsyslog

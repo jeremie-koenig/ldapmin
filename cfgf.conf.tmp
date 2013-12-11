@@ -1,2 +1,2 @@
 CFGF_WD="`pwd`/tmp"
-CFGF_VPATH="`pwd`/common /usr/share/cfgf"
+CFGF_VPATH="`pwd`/common `pwd`/domain /usr/share/cfgf"
