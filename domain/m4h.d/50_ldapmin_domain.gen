@@ -118,6 +118,16 @@ sub emitrq($) {
 	}
 }
 
+sub emit_soa ($$) {
+	my ($zone, $rq) = @_;
+
+	printf ZONE "%s SOA %s %s (%d 1d 2h 4w 1h)\n",
+		$zone,
+		ldap_dn2domain(who_am_i()),
+		"root.$zone",
+		time();
+}
+
 print "m4_define(`ldapmin_domain_zones',\n\t`";
 make_path $zonedir;
 foreach my $rq (ldapmin_service_requests("domain")) {
@@ -131,10 +141,17 @@ foreach my $rq (ldapmin_service_requests("domain")) {
 	# Now build the zone by iterating over service requests
 	my $zone = ldap_dn2domain($dn);
 	open ZONE, "> $zonedir/$zone.n";
+
+	# Zone header (TODO: make it customizable)
+	print ZONE "\$TTL 1h\n";
+	emit_soa($zone, $rq);
+
+	# Emit the resource records for each service
 	my @rr;
 	foreach my $srq (ldap_search(base => $dn, filter => $srqf)) {
 		emitrq($srq);
 	}
+
 	close ZONE;
 	rename "$zonedir/$zone.n", "$zonedir/$zone";
 
