@@ -1,6 +1,7 @@
 ## Minimal installation
 
 # Dependencies of ldapmin
+cfgf
 pkgsync
 libnet-ldap-perl
 
