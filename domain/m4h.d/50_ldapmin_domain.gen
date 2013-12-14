@@ -1,4 +1,9 @@
 #!/usr/bin/perl -w
+#
+#  Write zone files and emit their names to standard output as the m4
+#  definition `ldapmin_domain_zones'.
+#
+
 use File::Path qw(make_path);
 use strict;
 require "ldapmin.ph";
@@ -130,9 +135,8 @@ sub emit_soa ($$) {
 
 print "m4_define(`ldapmin_domain_zones',\n\t`";
 make_path $zonedir;
-foreach my $rq (ldapmin_service_requests("domain")) {
-	my $srqf = "(objectClass=ldapminServiceRequest)";
-
+foreach my $rq (ldapmin_service_requests("domain"))
+{
 	# Find the DN of the root object for this zone
 	my $dn = $$rq{dn}[0];
 	do { $dn = shiftdn($dn) } while ($dn =~ /^(?!dc=)./);
@@ -147,9 +151,17 @@ foreach my $rq (ldapmin_service_requests("domain")) {
 	emit_soa($zone, $rq);
 
 	# Emit the resource records for each service
-	my @rr;
+	my $srqf = "(objectClass=ldapminServiceRequest)";
 	foreach my $srq (ldap_search(base => $dn, filter => $srqf)) {
 		emitrq($srq);
+	}
+
+	# Emit resource records for the domain's hosts
+	my $iphf = "(objectClass=ipHost)";
+	foreach my $host (ldap_search(base => $dn, filter => $iphf)) {
+		print ZONE ";; $$host{dn}[0]\n";
+		my $name = ldap_dn2domain($$host{dn}[0]);
+		emit_address($name, $_) foreach @{$$host{ipHostNumber}};
 	}
 
 	close ZONE;
