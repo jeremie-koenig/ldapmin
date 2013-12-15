@@ -2,7 +2,7 @@ dn: cn=ldapmin,cn=schema,cn=config
 objectClass: olcSchemaConfig
 cn: ldapmin
 #
-olcObjectIdentifier: LDAPmin 1.3.6.1.4.1.858827
+olcObjectIdentifier: LDAPmin 2.25.144647854213487061415560260596997920457
 olcObjectIdentifier: LDAPminAttributeType LDAPmin:3
 olcObjectIdentifier: LDAPminObjectClass LDAPmin:4
 #
