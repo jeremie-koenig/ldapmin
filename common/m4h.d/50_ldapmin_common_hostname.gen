@@ -8,7 +8,7 @@ sub entry2both ($) {
 	return defined($domain) ? [ $domain =~ /([^.]*)\.?(.*)/ ] : undef;
 }
 
-my @options = map(entry2both($_), LDAPmin::who_am_i()), ["localhost", "."];
+my @options = (map(entry2both($_), LDAPmin::who_am_i()), ["localhost", "."]);
 my ($hostname, $domain) = @{shift @options};
 print "m4_define(`ldapmin_hostname', `$hostname')m4_dnl\n";
 print "m4_define(`ldapmin_domain', `$domain')m4_dnl\n";
