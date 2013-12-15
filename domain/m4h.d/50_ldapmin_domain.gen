@@ -5,8 +5,8 @@
 #
 
 use File::Path qw(make_path);
+use LDAPmin;
 use strict;
-require "ldapmin.ph";
 
 my $zonedir = "ldapmin/domain/zones";
 
@@ -104,20 +104,22 @@ sub emitrq($) {
 	my $srq = shift;
 	my %rr = (
 		request => $srq,
-		name => ldap_dn2domain(shiftdn($$srq{dn}[0])),
-		service => $$srq{cn}[0],
-		proto => $$srq{ipServiceProtocol}[0],
-		port => $$srq{ipServicePort}[0],
+		name => $srq->parent()->associated_domain(),
+		service => scalar($srq->get_value('cn')),
+		proto => scalar($srq->get_value('ipServiceProtocol')),
+		port => scalar($srq->get_value('ipServicePort')),
 	);
 
-	print ZONE ";; $$srq{dn}[0]\n";
-	foreach my $offer (ldapmin_service_offers($$srq{dn}[0])) {
-		print ZONE "; $$offer{dn}[0]\n";
+	# FIXME: validate 'name'
+
+	printf ZONE ";; %s\n", $srq->dn();
+	foreach my $offer ($srq->service_offers()) {
+		printf ZONE "; %s\n", $offer->dn();
 		emitrr(%rr,
 			offer => $offer,
-			target => ldap_dn2domain($$offer{dn}[0]),
-			priority => $$offer{priority}[0] || $default_prio,
-			weight => $$offer{weight}[0] || $default_weight,
+			target => $offer->associated_domain(),
+			priority => $offer->get_value('priority') || $default_prio,
+			weight => $offer->get_value('weight') || $default_weight,
 		);
 	}
 	print ZONE "\n";
@@ -125,25 +127,28 @@ sub emitrq($) {
 
 sub emit_soa ($$) {
 	my ($zone, $rq) = @_;
+	my ($self) = LDAPmin::who_am_i();
 
 	printf ZONE "%s SOA %s %s (%d 1d 2h 4w 1h)\n\n",
 		$zone,
-		ldap_dn2domain(who_am_i()),
+		$self->associated_domain(),
 		"root.$zone",
 		time();
 }
 
+LDAPmin::search();
+
 print "m4_define(`ldapmin_domain_zones',\n\t`";
 make_path $zonedir;
-foreach my $rq (ldapmin_service_requests("domain"))
+foreach my $rq (LDAPmin::service_requests("domain"))
 {
 	# Find the DN of the root object for this zone
-	my $dn = $$rq{dn}[0];
-	do { $dn = shiftdn($dn) } while ($dn =~ /^(?!dc=)./);
+	my $dn = $rq->dn();
+	do { $dn = LDAPmin::shiftdn($dn) } while ($dn =~ /^(?!dc=)./);
 	next unless defined($dn);
 
 	# Now build the zone by iterating over service requests
-	my $zone = ldap_dn2domain($dn);
+	my $zone = LDAPmin::dn2domain($dn);
 	open ZONE, "> $zonedir/$zone.n";
 
 	# Zone header (TODO: make it customizable)
@@ -152,16 +157,16 @@ foreach my $rq (ldapmin_service_requests("domain"))
 
 	# Emit the resource records for each service
 	my $srqf = "(objectClass=ldapminServiceRequest)";
-	foreach my $srq (ldap_search(base => $dn, filter => $srqf)) {
+	foreach my $srq (LDAPmin::search(base => $dn, filter => $srqf)) {
 		emitrq($srq);
 	}
 
 	# Emit resource records for the domain's hosts
 	my $iphf = "(objectClass=ipHost)";
-	foreach my $host (ldap_search(base => $dn, filter => $iphf)) {
-		print ZONE ";; $$host{dn}[0]\n";
-		my $name = ldap_dn2domain($$host{dn}[0]);
-		emit_address($name, $_) foreach @{$$host{ipHostNumber}};
+	foreach my $host (LDAPmin::search(base => $dn, filter => $iphf)) {
+		printf ZONE ";; %s\n", $host->dn();
+		my $name = $host->associated_domain();
+		emit_address($name, $_) foreach $host->get_value('ipHostNumber');
 	}
 
 	close ZONE;

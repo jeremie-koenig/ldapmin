@@ -1,17 +1,14 @@
 #!/usr/bin/perl -w
-require "ldapmin.ph";
+use LDAPmin;
+use strict;
 
-# FIXME: should define a global regex for acceptable domain components?
-
-sub dn2both ($) {
-	my $dn = shift;
-	my ($hostname, $domain_dn) = /^cn=([^`'.,]*),(.*)/;
-	my $domain = ldap_dn2domain($domain_dn);
-	return [$hostname, $domain] if defined($hostname) && defined($domain);
-	return ();
+sub entry2both ($) {
+	my $entry = shift;
+	my $domain = $entry->associated_domain();
+	return defined($domain) ? [ $domain =~ /([^.]*)\.?(.*)/ ] : undef;
 }
 
-my @options = map(dn2both($_), who_am_i()), ["localhost", "."];
+my @options = map(entry2both($_), LDAPmin::who_am_i()), ["localhost", "."];
 my ($hostname, $domain) = @{shift @options};
 print "m4_define(`ldapmin_hostname', `$hostname')m4_dnl\n";
 print "m4_define(`ldapmin_domain', `$domain')m4_dnl\n";
